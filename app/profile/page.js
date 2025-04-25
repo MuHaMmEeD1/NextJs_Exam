@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-import Loading from "@/components/Loading";
+import Loading from "@/components/loading";
 import { useRouter } from "next/navigation";
 import { useSearchStore } from "@/stores/searchStorage";
 import { useSearchParams } from "next/navigation";

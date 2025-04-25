@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import TextEditor from "../../../components/TextEditor";
 import { useRouter } from "next/navigation";
-import Loading from "@components/loading.jsx";
+import Loading from "@/components/loading";
 
 const AddBlog = () => {
   const [formData, setFormData] = useState({

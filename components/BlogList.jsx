@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import Loading from "@/components/Loading";
+import Loading from "@/components/loading";
 import { useSearchStore } from "@/stores/searchStorage";
 
 const BlogList = () => {
