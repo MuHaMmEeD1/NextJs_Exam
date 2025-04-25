@@ -74,7 +74,7 @@ const EditBlog = ({ params }) => {
     setStatus({ error: null, success: false });
 
     try {
-      const { id } = params;
+      const { id } = await params;
       const response = await fetch(`/api/blogs/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
