@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Loading from "@/components/loading";
 import { useSearchStore } from "@/stores/searchStorage";
-import { useSearchParams } from "next/navigation";
 
 const Profile = ({ params }) => {
   const [userEmail, setUserEmail] = useState("");
@@ -13,24 +12,18 @@ const Profile = ({ params }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const blogsPerPage = 9;
-  const { search, setSearch } = useSearchStore();
 
+  const { search } = useSearchStore();
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
 
-  const takeUser = async () => {
-    const { id } = await params;
-
-    await fetchBlogs(id);
-
-    setIsLoading(false);
-  };
-
-  const fetchBlogs = async (userId) => {
+  const fetchBlogs = async () => {
     try {
       setIsLoading(true);
 
-      let url = `http://localhost:3000/api/blogs?author=${userId}`;
+      const { id } = await params;
+      let url = `http://localhost:3000/api/blogs?author=${id}`;
+
       if (search.trim().length > 0) {
         url += `&search=${encodeURIComponent(search.trim())}`;
       }
@@ -38,11 +31,13 @@ const Profile = ({ params }) => {
       if (category) {
         url += `&category=${encodeURIComponent(category)}`;
       }
+
       const res = await fetch(url);
       const data = await res.json();
+
       setBlogs(data.blogs || []);
-      if (data.blogs.length != 0) {
-        setUserEmail(data.blogs[0].author.email);
+      if (data.blogs && data.blogs.length > 0) {
+        setUserEmail(data.blogs[0].author?.email || "");
       }
     } catch (error) {
       console.error("Error fetching blogs:", error);
@@ -53,13 +48,14 @@ const Profile = ({ params }) => {
   };
 
   useEffect(() => {
-    takeUser();
+    fetchBlogs();
   }, [search, category]);
 
   const totalPages = Math.ceil(blogs.length / blogsPerPage);
-  const indexOfLastBlog = currentPage * blogsPerPage;
-  const indexOfFirstBlog = indexOfLastBlog - blogsPerPage;
-  const currentBlogs = blogs.slice(indexOfFirstBlog, indexOfLastBlog);
+  const currentBlogs = blogs.slice(
+    (currentPage - 1) * blogsPerPage,
+    currentPage * blogsPerPage
+  );
 
   const paginate = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -103,46 +99,40 @@ const Profile = ({ params }) => {
                 href={`/blogs/${blog.id}`}
                 key={blog.id}
                 className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow 
-                  bg-white dark:bg-gray-800 dark:border-gray-700
-                  hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+                bg-white dark:bg-gray-800 dark:border-gray-700
+                hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
               >
                 <img
                   src={blog.thumbnail}
                   alt={blog.title}
                   className="w-full h-[220px] object-cover hover:scale-105 transition-transform duration-300"
                 />
-
                 <div className="p-5 space-y-3">
                   {blog.category?.name && (
                     <div
                       className="bg-[#4B6BFB]/10 text-[#4B6BFB] dark:bg-[#4B6BFB]/20 dark:text-[#7B9AFF] 
-                        font-semibold text-xs tracking-wider inline-block px-2 py-1 rounded-md
-                        hover:bg-[#4B6BFB]/20 dark:hover:bg-[#4B6BFB]/30 transition-colors"
+                      font-semibold text-xs tracking-wider inline-block px-2 py-1 rounded-md
+                      hover:bg-[#4B6BFB]/20 dark:hover:bg-[#4B6BFB]/30 transition-colors"
                     >
                       {blog.category.name}
                     </div>
                   )}
-
                   <h2 className="text-lg font-bold leading-tight text-gray-900 dark:text-white hover:text-[#4B6BFB] dark:hover:text-[#7B9AFF] transition-colors">
                     {blog.title}
                   </h2>
-
                   <div className="flex items-center gap-3 pt-2">
                     {blog.thumbnail && (
                       <img
                         src={blog.thumbnail}
                         alt={blog.title || "Author"}
                         className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm 
-                          dark:border-gray-500
-                          hover:border-[#4B6BFB] dark:hover:border-[#7B9AFF]
-                          hover:scale-105 
-                          transition-all duration-300 cursor-pointer"
+                        dark:border-gray-500 hover:border-[#4B6BFB] dark:hover:border-[#7B9AFF]
+                        hover:scale-105 transition-all duration-300 cursor-pointer"
                       />
                     )}
                     <span className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
                       {blog.author?.email || "Unknown author"}
                     </span>
-
                     <span className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
                       {blog.created_at &&
                         new Date(blog.created_at).toLocaleDateString("en-US", {
@@ -160,7 +150,7 @@ const Profile = ({ params }) => {
           {blogs.length > blogsPerPage && (
             <div className="flex justify-center mt-8 gap-2">
               <button
-                onClick={() => paginate(currentPage > 1 ? currentPage - 1 : 1)}
+                onClick={() => paginate(currentPage - 1)}
                 disabled={currentPage === 1}
                 className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg 
                   text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700
@@ -174,8 +164,7 @@ const Profile = ({ params }) => {
                   <button
                     key={number}
                     onClick={() => paginate(number)}
-                    className={`px-4 py-2 border rounded-lg transition-colors duration-200
-                    ${
+                    className={`px-4 py-2 border rounded-lg transition-colors duration-200 ${
                       currentPage === number
                         ? "bg-[#4B6BFB] border-[#4B6BFB] text-white"
                         : "border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -187,11 +176,7 @@ const Profile = ({ params }) => {
               )}
 
               <button
-                onClick={() =>
-                  paginate(
-                    currentPage < totalPages ? currentPage + 1 : totalPages
-                  )
-                }
+                onClick={() => paginate(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg 
                   text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700
