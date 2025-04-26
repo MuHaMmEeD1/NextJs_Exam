@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
@@ -12,12 +12,31 @@ import { useSearchStore } from "@/stores/searchStorage";
 
 const MyHeader = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { search, setSearch } = useSearchStore();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const dropdownRef = useRef(null);
+  const { search, setSearch } = useSearchStore();
 
   useEffect(() => {
-    const res = localStorage.getItem("auth-storage");
-    setIsLoggedIn(!!res);
+    const getCookie = (name) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(";").shift();
+    };
+
+    const authToken = getCookie("sb-yfskwgozkoqeoqdiivve-auth-token");
+    setIsLoggedIn(!!authToken);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleInputChange = (e) => {
@@ -32,6 +51,14 @@ const MyHeader = () => {
     if (e.key === "Enter") {
       handleSearchSubmit();
     }
+  };
+
+  const handleLogout = () => {
+    document.cookie =
+      "sb-yfskwgozkoqeoqdiivve-auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    setIsLoggedIn(false);
+    setIsDropdownOpen(false);
+    window.location.href = "/sign-in";
   };
 
   return (
@@ -66,19 +93,18 @@ const MyHeader = () => {
             Home
           </Link>
           <Link
-            href="/blogs/add"
+            href={isLoggedIn ? "/blogs/add" : "/sign-in"}
             className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             Write a Blog
           </Link>
-          {isLoggedIn && (
-            <Link
-              href="/profile"
-              className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-            >
-              My Blogs
-            </Link>
-          )}
+
+          <Link
+            href={isLoggedIn ? "/profile" : "/sign-in"}
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          >
+            My Blogs
+          </Link>
           <Link
             href="#contact"
             scroll={false}
@@ -113,15 +139,37 @@ const MyHeader = () => {
 
           <ThemeToggle />
           {isLoggedIn ? (
-            <Link href="/profile/">
-              <Image
-                src={DefaultProfile}
-                alt="Profile"
-                width={32}
-                height={32}
-                className="rounded-full h-8 w-8 object-cover"
-              />
-            </Link>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="focus:outline-none"
+              >
+                <Image
+                  src={DefaultProfile}
+                  alt="Profile"
+                  width={32}
+                  height={32}
+                  className="rounded-full h-8 w-8 object-cover cursor-pointer"
+                />
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700">
+                  <Link
+                    href="/profile"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <Link
               href="/sign-in"
